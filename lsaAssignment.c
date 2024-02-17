@@ -7,10 +7,7 @@
 int main()
 {
     FILE *inputFile, *outputFile;
-    char inputFilename[50];  // Replace with your actual input file name
-    char outputFilename[50]; // Replace with your desired output file name
 
-    // Open input and output files
     inputFile = fopen("text1.txt", "r");
     if (inputFile == NULL)
     {
@@ -26,14 +23,13 @@ int main()
         return 1;
     }
 
-    // Read and analyze each line
     int lsa1, lsa2, lsa3, lsa4, lsa5;
     char color1[10], color2[10], color3[10], color4[10], color5[10];
     while (fscanf(inputFile, "LSA_1: %d \t LSA_2: %d \t LSA_3: %d \t LSA_4: %d \t LSA_5: %d",
                   &lsa1, &lsa2, &lsa3, &lsa4, &lsa5) == 5)
-    { // Check for successful read
+    {
 
-        printf("1");
+        printf("1"); // Check for if the while loop is executing which it is not
         if (lsa1 >= BLACK_THRESHOLD)
         {
             strcpy(color1, "WHITE-");
@@ -94,7 +90,7 @@ int main()
     fclose(inputFile);
     fclose(outputFile);
 
-    printf("Analysis complete. Check output file: %s\n", outputFilename);
+    printf("Analysis complete. Check output file:\n");
 
     return 0;
 }
