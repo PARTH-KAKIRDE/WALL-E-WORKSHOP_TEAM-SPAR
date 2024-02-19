@@ -2,95 +2,60 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define BLACK_THRESHOLD 900 // Anything below is black
+void process_lsa(const char *input_filename, const char *output_filename);
 
 int main()
 {
+    process_lsa("text1.txt", "lsa1.txt");
+    process_lsa("text2.txt", "lsa2.txt");
+    return 0;
+}
+
+void process_lsa(const char *input_filename, const char *output_filename)
+{
     FILE *inputFile, *outputFile;
 
-    inputFile = fopen("text1.txt", "r");
+    char line[100];
+    int lsa_values[5];
+
+    inputFile = fopen(input_filename, "r");
     if (inputFile == NULL)
     {
-        printf("Error opening file: %s\n", inputFilename);
-        return 1;
+        printf("Error opening input file!\n");
+        return;
     }
 
-    outputFile = fopen("lsa1.txt", "w");
+    outputFile = fopen(output_filename, "w");
     if (outputFile == NULL)
     {
-        printf("Error creating output file: %s\n", inputFilename);
+        printf("Error opening output file!\n");
         fclose(inputFile);
-        return 1;
+        return;
     }
 
-    int lsa1, lsa2, lsa3, lsa4, lsa5;
-    char color1[10], color2[10], color3[10], color4[10], color5[10];
-    while (fscanf(inputFile, "LSA_1: %d \t LSA_2: %d \t LSA_3: %d \t LSA_4: %d \t LSA_5: %d",
-                  &lsa1, &lsa2, &lsa3, &lsa4, &lsa5) == 5)
+    while (fgets(line, sizeof(line), inputFile) != NULL)
     {
-
-        printf("1"); // Check for if the while loop is executing which it is not
-        if (lsa1 >= BLACK_THRESHOLD)
+        if (strncmp(line, "I (", 3) != 0)
         {
-            strcpy(color1, "WHITE-");
-        }
-        else
-        {
-            strcpy(color1, "BLACK-");
+            continue;
         }
 
-        if (lsa2 >= BLACK_THRESHOLD)
-        {
-            strcpy(color2, "WHITE-");
-        }
-        else
-        {
-            strcpy(color2, "BLACK-");
-        }
+        sscanf(line, "%*[^LSA_READINGS:]: LSA_1: %d \t LSA_2: %d \t LSA_3: %d \t LSA_4: %d \t LSA_5: %d",
+               &lsa_values[0], &lsa_values[1], &lsa_values[2], &lsa_values[3], &lsa_values[4]);
 
-        // Repeat for lsa3, lsa4, lsa5
-        if (lsa3 >= BLACK_THRESHOLD)
+        for (int i = 0; i < 5; i++)
         {
-            strcpy(color3, "WHITE-");
+            if (lsa_values[i] < 900)
+            {
+                fprintf(outputFile, (i == 4) ? "Black\n" : "Black-");
+            }
+            else
+            {
+                fprintf(outputFile, (i == 4) ? "White\n" : "White-");
+            }
         }
-        else
-        {
-            strcpy(color3, "BLACK-");
-        }
-
-        if (lsa4 >= BLACK_THRESHOLD)
-        {
-            strcpy(color4, "WHITE-");
-        }
-        else
-        {
-            strcpy(color4, "BLACK-");
-        }
-
-        if (lsa5 >= BLACK_THRESHOLD)
-        {
-            strcpy(color5, "WHITE-");
-        }
-        else
-        {
-            strcpy(color5, "BLACK-");
-        }
-
-        // Write colors to output file
-        fprintf(outputFile, "%s\t%s\t%s\t%s\t%s\n", color1, color2, color3, color4, color5);
     }
-
-    // Check for errors after the loop
-    if (ferror(inputFile))
-    {
-        printf("Error reading file.\n");
-    }
-
-    // Close files
+    printf("Completed Processing");
     fclose(inputFile);
     fclose(outputFile);
-
-    printf("Analysis complete. Check output file:\n");
-
-    return 0;
 }
