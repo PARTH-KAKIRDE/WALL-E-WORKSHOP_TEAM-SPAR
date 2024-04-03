@@ -155,25 +155,25 @@ void calculate_error()
     }
 }
 
-void follow_line()
+void follow_line(motor_handle_t motor_a_0, motor_handle_t motor_a_1)
 {
     set_motor_speed(motor_a_0, MOTOR_FORWARD, left_duty_cycle);
     set_motor_speed(motor_a_1, MOTOR_FORWARD, right_duty_cycle);
 }
 
-void turn_left()
+void turn_left(motor_handle_t motor_a_0, motor_handle_t motor_a_1)
 {
     set_motor_speed(motor_a_0, MOTOR_BACKWARD, left_duty_cycle);
     set_motor_speed(motor_a_1, MOTOR_FORWARD, right_duty_cycle);
 }
 
-void turn_right()
+void turn_right(motor_handle_t motor_a_0, motor_handle_t motor_a_1)
 {
     set_motor_speed(motor_a_0, MOTOR_FORWARD, left_duty_cycle);
     set_motor_speed(motor_a_1, MOTOR_BACKWARD, right_duty_cycle);
 }
 
-void stop_robot()
+void stop_robot(motor_handle_t motor_a_0, motor_handle_t motor_a_1)
 {
     set_motor_speed(motor_a_0, MOTOR_STOP, 0);
     set_motor_speed(motor_a_1, MOTOR_STOP, 0);
@@ -216,11 +216,11 @@ void maze_solve_task(void *arg)
         case FOLLOW_LINE:
             if (error > 0)
             {
-                follow_line();
+                follow_line(motor_a_0, motor_a_1);
             }
             else if (error < 0)
             {
-                turn_left();
+                turn_left(motor_a_0, motor_a_1);
                 record_left_turn(); // Record left turn
 #ifdef CONFIG_ENABLE_OLED
                 // Display message on OLED
@@ -230,7 +230,7 @@ void maze_solve_task(void *arg)
             }
             else
             {
-                turn_right();
+                turn_right(motor_a_0, motor_a_1);
                 record_right_turn(); // Record right turn
 #ifdef CONFIG_ENABLE_OLED
                 // Display message on OLED
@@ -256,13 +256,13 @@ void maze_solve_task(void *arg)
             break;
 
         case TURN_LEFT:
-            turn_left();
+            turn_left(motor_a_0, motor_a_1);
             vTaskDelay(1000 / portTICK_PERIOD_MS); // Adjust delay for turning left
             current_state = FOLLOW_LINE;
             break;
 
         case TURN_RIGHT:
-            turn_right();
+            turn_right(motor_a_0, motor_a_1);
             vTaskDelay(1000 / portTICK_PERIOD_MS); // Adjust delay for turning right
             current_state = FOLLOW_LINE;
             break;
@@ -296,17 +296,17 @@ void maze_solve_task(void *arg)
 
         case END_OF_MAZE:
             // Stop the robot
-            stop_robot();
+            stop_robot(motor_a_0, motor_a_1);
             // Perform action to turn back or navigate back to the path
             // For simplicity, let's assume turning back
-            turn_left();                           // Turn around 180 degrees
+            turn_left(motor_a_0, motor_a_1);       // Turn around 180 degrees
             vTaskDelay(2000 / portTICK_PERIOD_MS); // Adjust delay for turning around
             current_state = FOLLOW_LINE;           // Return to following the line
             break;
 
         case REACHED_GOAL:
             // Stop the robot at the goal
-            stop_robot();
+            stop_robot(motor_a_0, motor_a_1);
             // You may perform additional actions here, such as signaling completion
             // Then, exit the maze solving task
             vTaskDelete(NULL);
