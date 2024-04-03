@@ -107,6 +107,22 @@ bool detect_intersection(line_sensor_array readings)
     return false;
 }
 
+// Function to detect the goal (black square)
+bool detect_goal(line_sensor_array readings)
+{
+    // Implement the logic to detect the goal here
+    // For example, if all sensors detect black, it may indicate the goal
+    return false; // Placeholder return value, replace with actual implementation
+}
+
+// Function to detect the end of the maze
+bool detect_end_of_maze(line_sensor_array readings)
+{
+    // Implement the logic to detect the end of the maze here
+    // For example, if a specific pattern of sensor readings indicates the end of the maze
+    return false; // Placeholder return value, replace with actual implementation
+}
+
 // Function to calculate error based on black boundary
 void calculate_error()
 {
