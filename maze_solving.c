@@ -107,22 +107,6 @@ bool detect_intersection(line_sensor_array readings)
     return false;
 }
 
-// Function to detect the goal (black square)
-bool detect_goal(line_sensor_array readings)
-{
-    // Implement the logic to detect the goal here
-    // For example, if all sensors detect black, it may indicate the goal
-    return false; // Placeholder return value, replace with actual implementation
-}
-
-// Function to detect the end of the maze
-bool detect_end_of_maze(line_sensor_array readings)
-{
-    // Implement the logic to detect the end of the maze here
-    // For example, if a specific pattern of sensor readings indicates the end of the maze
-    return false; // Placeholder return value, replace with actual implementation
-}
-
 // Function to calculate error based on black boundary
 void calculate_error()
 {
@@ -171,6 +155,18 @@ void calculate_error()
     }
 }
 
+void calculate_correction()
+{
+    error = error * 10; // we need the error correction in range 0-100 so that we can send it directly as duty cycle paramete
+    difference = error - prev_error;
+    cumulative_error += error;
+
+    cumulative_error = bound(cumulative_error, -30, 30);
+
+    correction = read_pid_const().kp * error + read_pid_const().ki * cumulative_error + read_pid_const().kd * difference;
+    prev_error = error;
+}
+
 void follow_line(motor_handle_t motor_a_0, motor_handle_t motor_a_1)
 {
     set_motor_speed(motor_a_0, MOTOR_FORWARD, left_duty_cycle);
@@ -179,14 +175,14 @@ void follow_line(motor_handle_t motor_a_0, motor_handle_t motor_a_1)
 
 void turn_left(motor_handle_t motor_a_0, motor_handle_t motor_a_1)
 {
-    set_motor_speed(motor_a_0, MOTOR_BACKWARD, left_duty_cycle);
-    set_motor_speed(motor_a_1, MOTOR_FORWARD, right_duty_cycle);
+    set_motor_speed(motor_a_0, MOTOR_BACKWARD, left_duty_cycle - optimum_duty_cycle);
+    set_motor_speed(motor_a_1, MOTOR_FORWARD, right_duty_cycle + optimum_duty_cycle);
 }
 
 void turn_right(motor_handle_t motor_a_0, motor_handle_t motor_a_1)
 {
-    set_motor_speed(motor_a_0, MOTOR_FORWARD, left_duty_cycle);
-    set_motor_speed(motor_a_1, MOTOR_BACKWARD, right_duty_cycle);
+    set_motor_speed(motor_a_0, MOTOR_FORWARD, left_duty_cycle + optimum_duty_cycle);
+    set_motor_speed(motor_a_1, MOTOR_BACKWARD, right_duty_cycle - optimum_duty_cycle);
 }
 
 void stop_robot(motor_handle_t motor_a_0, motor_handle_t motor_a_1)
@@ -203,6 +199,15 @@ void maze_solve_task(void *arg)
     adc_handle_t line_sensor;
     ESP_ERROR_CHECK(enable_line_sensor(&line_sensor));
     ESP_ERROR_CHECK(enable_bar_graph());
+#ifdef CONFIG_ENABLE_OLED
+    // Initialising the OLED
+    ESP_ERROR_CHECK(init_oled());
+    vTaskDelay(100);
+
+    // Clearing the screen
+    lv_obj_clean(lv_scr_act());
+
+#endif
 
     bool exploration_done = false; // Flag to indicate exploration completion
     int path_index = 0;            // Index to iterate through the recorded path
@@ -214,9 +219,14 @@ void maze_solve_task(void *arg)
         {
             line_sensor_readings.adc_reading[i] = bound(line_sensor_readings.adc_reading[i], BLACK_MARGIN, WHITE_MARGIN);
             line_sensor_readings.adc_reading[i] = map(line_sensor_readings.adc_reading[i], BLACK_MARGIN, WHITE_MARGIN, bound_LSA_LOW, bound_LSA_HIGH);
+            line_sensor_readings.adc_reading[i] = 1000 - (line_sensor_readings.adc_reading[i]);
         }
 
         calculate_error();
+        calculate_correction();
+
+        left_duty_cycle = bound((optimum_duty_cycle + correction), lower_duty_cycle, higher_duty_cycle);
+        right_duty_cycle = bound((optimum_duty_cycle - correction), lower_duty_cycle, higher_duty_cycle);
 
         switch (current_state)
         {
@@ -229,11 +239,21 @@ void maze_solve_task(void *arg)
             {
                 turn_left(motor_a_0, motor_a_1);
                 record_left_turn(); // Record left turn
+#ifdef CONFIG_ENABLE_OLED
+                // Display message on OLED
+                lv_label_set_text(label, "Turning left...");
+                lv_obj_align(label, NULL, LV_ALIGN_CENTER, 0, 0);
+#endif
             }
             else
             {
                 turn_right(motor_a_0, motor_a_1);
                 record_right_turn(); // Record right turn
+#ifdef CONFIG_ENABLE_OLED
+                // Display message on OLED
+                lv_label_set_text(label, "Turning right...");
+                lv_obj_align(label, NULL, LV_ALIGN_CENTER, 0, 0);
+#endif
             }
 
             // Check for intersection
@@ -269,12 +289,22 @@ void maze_solve_task(void *arg)
             if (detect_goal(line_sensor_readings))
             {
                 current_state = REACHED_GOAL;
+#ifdef CONFIG_ENABLE_OLED
+                // Display message on OLED
+                lv_label_set_text(label, "Goal reached!");
+                lv_obj_align(label, NULL, LV_ALIGN_CENTER, 0, 0);
+#endif
                 break;
             }
             // Check for end of maze
             if (detect_end_of_maze(line_sensor_readings))
             {
                 current_state = END_OF_MAZE;
+#ifdef CONFIG_ENABLE_OLED
+                // Display message on OLED
+                lv_label_set_text(label, "End of maze detected!");
+                lv_obj_align(label, NULL, LV_ALIGN_CENTER, 0, 0);
+#endif
                 break;
             }
             // Otherwise, continue following the line
@@ -307,6 +337,11 @@ void maze_solve_task(void *arg)
         if (!exploration_done && detect_end_of_maze(line_sensor_readings))
         {
             exploration_done = true;
+#ifdef CONFIG_ENABLE_OLED
+            // Display message on OLED
+            lv_label_set_text(label, "Exploration complete. Solving maze...");
+            lv_obj_align(label, NULL, LV_ALIGN_CENTER, 0, 0);
+#endif
             vTaskDelay(20000 / portTICK_PERIOD_MS); // Delay for 20 seconds
         }
 
