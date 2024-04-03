@@ -187,15 +187,6 @@ void maze_solve_task(void *arg)
     adc_handle_t line_sensor;
     ESP_ERROR_CHECK(enable_line_sensor(&line_sensor));
     ESP_ERROR_CHECK(enable_bar_graph());
-#ifdef CONFIG_ENABLE_OLED
-    // Initialising the OLED
-    ESP_ERROR_CHECK(init_oled());
-    vTaskDelay(100);
-
-    // Clearing the screen
-    lv_obj_clean(lv_scr_act());
-
-#endif
 
     bool exploration_done = false; // Flag to indicate exploration completion
     int path_index = 0;            // Index to iterate through the recorded path
@@ -222,21 +213,11 @@ void maze_solve_task(void *arg)
             {
                 turn_left(motor_a_0, motor_a_1);
                 record_left_turn(); // Record left turn
-#ifdef CONFIG_ENABLE_OLED
-                // Display message on OLED
-                lv_label_set_text(label, "Turning left...");
-                lv_obj_align(label, NULL, LV_ALIGN_CENTER, 0, 0);
-#endif
             }
             else
             {
                 turn_right(motor_a_0, motor_a_1);
                 record_right_turn(); // Record right turn
-#ifdef CONFIG_ENABLE_OLED
-                // Display message on OLED
-                lv_label_set_text(label, "Turning right...");
-                lv_obj_align(label, NULL, LV_ALIGN_CENTER, 0, 0);
-#endif
             }
 
             // Check for intersection
@@ -272,26 +253,16 @@ void maze_solve_task(void *arg)
             if (detect_goal(line_sensor_readings))
             {
                 current_state = REACHED_GOAL;
-#ifdef CONFIG_ENABLE_OLED
-                // Display message on OLED
-                lv_label_set_text(label, "Goal reached!");
-                lv_obj_align(label, NULL, LV_ALIGN_CENTER, 0, 0);
-#endif
                 break;
             }
             // Check for end of maze
             if (detect_end_of_maze(line_sensor_readings))
             {
                 current_state = END_OF_MAZE;
-#ifdef CONFIG_ENABLE_OLED
-                // Display message on OLED
-                lv_label_set_text(label, "End of maze detected!");
-                lv_obj_align(label, NULL, LV_ALIGN_CENTER, 0, 0);
-#endif
                 break;
             }
             // Otherwise, continue following the line
-            follow_line();
+            follow_line(motor_a_0, motor_a_1);
             break;
 
         case END_OF_MAZE:
@@ -320,11 +291,6 @@ void maze_solve_task(void *arg)
         if (!exploration_done && detect_end_of_maze(line_sensor_readings))
         {
             exploration_done = true;
-#ifdef CONFIG_ENABLE_OLED
-            // Display message on OLED
-            lv_label_set_text(label, "Exploration complete. Solving maze...");
-            lv_obj_align(label, NULL, LV_ALIGN_CENTER, 0, 0);
-#endif
             vTaskDelay(20000 / portTICK_PERIOD_MS); // Delay for 20 seconds
         }
 
